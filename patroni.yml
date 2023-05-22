@@ -1,0 +1,49 @@
+bootstrap:
+  dcs:
+    scope: postgres
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576
+  postgresql:
+    use_pg_rewind: true
+    parameters:
+      archive_mode: "on"
+      archive_command: "cd ."
+      wal_level: "replica"
+      max_wal_senders: 10
+      max_replication_slots: 10
+
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: "{{ get_private_ip() }}:8008"
+
+etcd:
+  host: localhost
+  port: 2381
+  protocol: http
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: "{{ get_private_ip() }}:5432"
+  data_dir: /var/lib/postgresql/data
+  bin_dir: /usr/lib/postgresql/12/bin
+  pgpass: /tmp/pgpass
+  databases:
+    - name: test
+      owner: postgres
+      replication: true
+  authentication:
+    superuser:
+      username: postgres
+      password: 12345678
+    replication:
+      username: postgres
+      password: 12345678
+  parameters:
+    archive_mode: "on"
+    archive_command: "cd ."
+    wal_level: "replica"
+    max_wal_senders: 10
+    max_replication_slots: 10
+

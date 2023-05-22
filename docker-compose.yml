@@ -1,0 +1,61 @@
+version: '3'
+
+services:
+  etcd:
+    container_name: etcd
+    image: quay.io/coreos/etcd:v3.3
+    command: >
+      etcd --name etcd-node
+           --data-dir /etcd-data
+           --advertise-client-urls http://etcd:2381
+           --listen-client-urls http://0.0.0.0:2381
+    ports:
+      - '2381:2380'
+    volumes:
+      - /tmp/etcd-data:/etcd-data
+
+  patroni:
+    container_name: patroni
+    image: dalongrong/patroni
+    command: patroni ./patroni.yml
+    depends_on:
+      - etcd
+    #volumes:
+    #  - ./patroni.yml:/patroni.yml
+
+  postgres1:
+    container_name: master
+    image: postgres:latest
+    volumes:
+      - ./postgres1:/var/lib/postgresql/data
+    environment:
+      - PATRONI_NAME=node1
+      - PATRONI_SCOPE=test
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - ETCD_HOST=etcd:2381
+    depends_on:
+      - patroni
+
+  postgres2:
+    container_name: slave
+    image: postgres:latest
+    volumes:
+      - ./postgres2:/var/lib/postgresql/data
+    environment:
+      - PATRONI_NAME=node2
+      - PATRONI_SCOPE=test
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - ETCD_HOST=etcd:2381
+    depends_on:
+      - patroni
+
+  haproxy:
+    container_name: haproxy
+    image: haproxy:latest
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
+    ports:
+      - '5432:5432'
+    depends_on:
+      - postgres1
+      - postgres2
